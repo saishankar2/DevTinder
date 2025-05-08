@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 
 const app = express();
 
@@ -45,7 +45,7 @@ const app = express();
 //     (req, res)=>{                 //Even if the next is placed before the res.send we will still get that error(Cannot set headers after they are sent to the client) as the 2nd response will be sent and the 1st one won't
 //         console.log("Hi");      // If all the request handlers just calls next(), without any response, then we get an error as there will be no handler that sends a response
 //         res.send("Response 2"); //i.e the response should be sent
-//     }                          
+//     }
 // ])  // We can wrap the handlers in an array either all or just a few but the behaviour is the same.. app.use("path", [r1, r2], r3, r4)
 // // A good practice is to use middlewares in a separate file and just require and use the function here and using try catch is also good for api calls
 
@@ -57,85 +57,89 @@ const app = express();
 // //the wild card error handling should be on the end of all the handlers as if some handler throws an error it catches it
 // })
 
-const {connectDB} = require("./config/database"); //both parent and child should have {} if you want to use
+const { connectDB } = require("./config/database"); //both parent and child should have {} if you want to use
 const User = require("./models/user");
-const { ReturnDocument } = require('mongodb');
+const { ReturnDocument } = require("mongodb");
 
 app.use(express.json()); //It checks for json's in the requests as the server cant parse the JSON requests
 
-
 //Find user by email
-app.get("/user",async (req, res)=>{
-    const email = req.body.emailId;
-    try{
-    const user = await User.find({emailId: email});
-    if(user.length===0){
-       res.status(404).send("User Not Found") 
+app.get("/user", async (req, res) => {
+  const email = req.body.emailId;
+  try {
+    const user = await User.find({ emailId: email });
+    if (user.length === 0) {
+      res.status(404).send("User Not Found");
+    } else {
+      res.send(user);
     }
-    else{
-        res.send(user);
-    }
-    }
-    catch(err){
-        res.status(400).send("Something went wrong");
-    }
-})
+  } catch (err) {
+    res.status(400).send("Something went wrong");
+  }
+});
 
-app.get("/feed", async (req, res)=>{
-    try{
-      //  const users = await User.find({emailId: req.body});  //Search by email
-        const users = await User.find({}); //This returns all the objects
-        res.send(users);
-    }
-    catch(err){
-        res.status(400).send("Something went wrong");
-    }
-})
+app.get("/feed", async (req, res) => {
+  try {
+    //  const users = await User.find({emailId: req.body});  //Search by email
+    const users = await User.find({}); //This returns all the objects
+    res.send(users);
+  } catch (err) {
+    res.status(400).send("Something went wrong");
+  }
+});
 
 //Delete User
-app.delete("/user", async (req, res)=>{
-    const userId = req.body.userId;
-    try{
-         const user = await User.findByIdAndDelete(userId);
-        res.send("deleted");
-    }
-    catch(err){
-        res.status(400).send("Something went wrong");
-    }
-})
-
-app.patch("/user", async (req, res)=>{
-   const data = req.body;
-   try{
-    const user = await User.findByIdAndUpdate(data.userId, data, {returnDocument: 'before'}); //If you try and update a field that is not present, it will get ignored
-    console.log(user)
-    res.send("Updated Succesfully")
-   }
-   catch(err){
+app.delete("/user", async (req, res) => {
+  const userId = req.body.userId;
+  try {
+    const user = await User.findByIdAndDelete(userId);
+    res.send("deleted");
+  } catch (err) {
     res.status(400).send("Something went wrong");
-   }
-})
+  }
+});
 
+app.patch("/user/:userId", async (req, res) => {
+  const data = req.body;
+  const userId = req.params?.userId
 
-
-
-app.post('/signup', async (req,res)=>{
-    const user = new User(req.body); //Creating an instance of the model
-    try{
-        await user.save();
-        res.send("User Added");
+  try {
+    const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "userId", "skills"];
+    const isUpdateAllowed = Object.keys(data).every((k) =>
+      ALLOWED_UPDATES.includes(k)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Update Not Allowed");
     }
-    catch(err){
-        res.status(404).send("Error saving the user");
+    if(data.skills.length> 10){
+        throw new Error("No more than 10 skills allowed");
     }
-})
-connectDB().then(()=>{
+    const user = await User.findByIdAndUpdate(userId, data, {
+      returnDocument: "before", //If you try and update a field that is not present, it will get ignored
+      runValidators: true,
+    }); //Validation will only run on update with this or else validation is skipped
+    res.send("Updated Succesfully");
+  } catch (err) {
+    res.status(400).send("Something went wrong"+ err);
+  }
+});
+
+app.post("/signup", async (req, res) => {
+  const user = new User(req.body); //Creating an instance of the model
+  try {
+    await user.save();
+    res.send("User Added");
+  } catch (err) {
+    res.status(404).send(err);
+  }
+});
+connectDB()
+  .then(() => {
     console.log("MongoDB connected successfully"); //A good way to connect to DB before listening
-    app.listen(3000, ()=>{
-        console.log("Server is a GO");
+    app.listen(3000, () => {
+      console.log("Server is a GO");
     });
-  }).catch((err)=>{
-    console.log("MongoDB connection failed", err)
+  })
+  .catch((err) => {
+    console.log("MongoDB connection failed", err);
   });
-
-
