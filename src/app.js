@@ -60,6 +60,8 @@ const app = express();
 const { connectDB } = require("./config/database"); //both parent and child should have {} if you want to use
 const User = require("./models/user");
 const { ReturnDocument } = require("mongodb");
+const { validateSignUpData } = require("./utils/validation");
+const bcrypt = require("bcrypt");
 
 app.use(express.json()); //It checks for json's in the requests as the server cant parse the JSON requests
 
@@ -101,7 +103,7 @@ app.delete("/user", async (req, res) => {
 
 app.patch("/user/:userId", async (req, res) => {
   const data = req.body;
-  const userId = req.params?.userId
+  const userId = req.params?.userId;
 
   try {
     const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "userId", "skills"];
@@ -111,8 +113,8 @@ app.patch("/user/:userId", async (req, res) => {
     if (!isUpdateAllowed) {
       throw new Error("Update Not Allowed");
     }
-    if(data.skills.length> 10){
-        throw new Error("No more than 10 skills allowed");
+    if (data.skills.length > 10) {
+      throw new Error("No more than 10 skills allowed");
     }
     const user = await User.findByIdAndUpdate(userId, data, {
       returnDocument: "before", //If you try and update a field that is not present, it will get ignored
@@ -120,19 +122,50 @@ app.patch("/user/:userId", async (req, res) => {
     }); //Validation will only run on update with this or else validation is skipped
     res.send("Updated Succesfully");
   } catch (err) {
-    res.status(400).send("Something went wrong"+ err);
+    res.status(400).send("Something went wrong" + err);
   }
 });
 
 app.post("/signup", async (req, res) => {
-  const user = new User(req.body); //Creating an instance of the model
+  //Creating an instance of the model
   try {
+    const { firstName, lastName, emailId, password } = req.body;
+    //Validating the data
+    validateSignUpData(req);
+    //Encryption
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new User({
+      firstName,
+      lastName,
+      emailId,
+      password: passwordHash,
+    });
     await user.save();
     res.send("User Added");
   } catch (err) {
-    res.status(404).send(err);
+    res.status(404).send(err.message);
   }
 });
+
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const user = await User.findOne({emailId: emailId});
+    if(!user){
+      throw new Error("Invalid Creadentials");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if(isPasswordValid){
+      res.send("Login successful");
+    }
+    else{
+      throw new Error("Invalid Creadentials");
+    }
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
 connectDB()
   .then(() => {
     console.log("MongoDB connected successfully"); //A good way to connect to DB before listening
