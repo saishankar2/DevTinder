@@ -62,8 +62,12 @@ const User = require("./models/user");
 const { ReturnDocument } = require("mongodb");
 const { validateSignUpData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json()); //It checks for json's in the requests as the server cant parse the JSON requests
+app.use(cookieParser()); //It parses the cookies
 
 //Find user by email
 app.get("/user", async (req, res) => {
@@ -147,18 +151,37 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const { firstName } = req.user;
+    res.send("Welcome " + firstName);
+  } catch (err) {
+    res.send("Please Login!!");
+  }
+});
+
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  console.log(req.user.firstName + " sent a request");
+  res.send("Sent");
+});
+
 app.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const user = await User.findOne({emailId: emailId});
-    if(!user){
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
       throw new Error("Invalid Creadentials");
     }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if(isPasswordValid){
+    const isPasswordValid = await user.validatePassword(password);
+    console.log(isPasswordValid);
+    if (isPasswordValid) {
+      const token = await user.getJWT(); //Creates the token
+      console.log(token);
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 36000000),
+      }); //Sends the cookie and we can also expire the cookie (Check docs)
       res.send("Login successful");
-    }
-    else{
+    } else {
       throw new Error("Invalid Creadentials");
     }
   } catch (err) {
