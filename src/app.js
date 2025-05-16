@@ -69,6 +69,14 @@ const { userAuth } = require("./middlewares/auth");
 app.use(express.json()); //It checks for json's in the requests as the server cant parse the JSON requests
 app.use(cookieParser()); //It parses the cookies
 
+const authRouter = require("./routes/auth");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/requests");
+
+app.use("/", authRouter);
+app.use("/", profileRouter);
+app.use("/", requestRouter);
+
 //Find user by email
 app.get("/user", async (req, res) => {
   const email = req.body.emailId;
@@ -102,90 +110,6 @@ app.delete("/user", async (req, res) => {
     res.send("deleted");
   } catch (err) {
     res.status(400).send("Something went wrong");
-  }
-});
-
-app.patch("/user/:userId", async (req, res) => {
-  const data = req.body;
-  const userId = req.params?.userId;
-
-  try {
-    const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "userId", "skills"];
-    const isUpdateAllowed = Object.keys(data).every((k) =>
-      ALLOWED_UPDATES.includes(k)
-    );
-    if (!isUpdateAllowed) {
-      throw new Error("Update Not Allowed");
-    }
-    if (data.skills.length > 10) {
-      throw new Error("No more than 10 skills allowed");
-    }
-    const user = await User.findByIdAndUpdate(userId, data, {
-      returnDocument: "before", //If you try and update a field that is not present, it will get ignored
-      runValidators: true,
-    }); //Validation will only run on update with this or else validation is skipped
-    res.send("Updated Succesfully");
-  } catch (err) {
-    res.status(400).send("Something went wrong" + err);
-  }
-});
-
-app.post("/signup", async (req, res) => {
-  //Creating an instance of the model
-  try {
-    const { firstName, lastName, emailId, password } = req.body;
-    //Validating the data
-    validateSignUpData(req);
-    //Encryption
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = new User({
-      firstName,
-      lastName,
-      emailId,
-      password: passwordHash,
-    });
-    await user.save();
-    res.send("User Added");
-  } catch (err) {
-    res.status(404).send(err.message);
-  }
-});
-
-app.get("/profile", userAuth, async (req, res) => {
-  try {
-    const { firstName } = req.user;
-    res.send("Welcome " + firstName);
-  } catch (err) {
-    res.send("Please Login!!");
-  }
-});
-
-app.post("/sendConnectionRequest", userAuth, async (req, res) => {
-  console.log(req.user.firstName + " sent a request");
-  res.send("Sent");
-});
-
-app.post("/login", async (req, res) => {
-  try {
-    const { emailId, password } = req.body;
-    const user = await User.findOne({ emailId: emailId });
-    if (!user) {
-      throw new Error("Invalid Creadentials");
-    }
-    const isPasswordValid = await user.validatePassword(password);
-    console.log(isPasswordValid);
-    if (isPasswordValid) {
-      const token = await user.getJWT(); //Creates the token
-      console.log(token);
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 8 * 36000000),
-      }); //Sends the cookie and we can also expire the cookie (Check docs)
-      res.send("Login successful");
-    } else {
-      throw new Error("Invalid Creadentials");
-    }
-  } catch (err) {
-    res.status(400).send(err.message);
   }
 });
 
