@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
     firstName: {
       type: String,
       required: true,
+      index: true, // This is an index
       maxLength: 50,
     },
     lastName: {
@@ -16,7 +17,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
       required: true,
-      unique: true,
+      unique: true, //This automatically creates an index
       trim: true,
       validate(value) {
         if (!validator.isEmail(value)) {
@@ -69,6 +70,7 @@ const userSchema = new mongoose.Schema(
     timestamps: true, //Create and updated date
   }
 );
+
 
 //Better to use userSchema methods for user methods
 userSchema.methods.getJWT = async function () {
