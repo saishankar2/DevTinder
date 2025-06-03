@@ -65,7 +65,12 @@ const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const { userAuth } = require("./middlewares/auth");
+const cors = require("cors");
 
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true,  //To whitelist this origin
+}));
 app.use(express.json()); //It checks for json's in the requests as the server cant parse the JSON requests
 app.use(cookieParser()); //It parses the cookies
 

@@ -7,7 +7,7 @@ const User = require("../models/user");
 profileRouter.get("/profile/view", userAuth, async (req, res) => {
   try {
     const { firstName } = req.user;
-    res.send("Welcome " + firstName);
+    res.send(req.user);
   } catch (err) {
     res.send("Please Login!!");
   }
@@ -16,18 +16,18 @@ profileRouter.get("/profile/view", userAuth, async (req, res) => {
 profileRouter.patch("/profile/edit", userAuth, async (req, res)=>{
   const data = req.body;
   const userId = req.params?.userId;
-
   try {
     const isUpdateAllowed = validateEditProfile(req);
     if (!isUpdateAllowed) {
       throw new Error("Update Not Allowed");
     }
-    if (data.skills.length > 10) {
+    if (data?.skills?.length > 10) {
       throw new Error("No more than 10 skills allowed");
     }
     const loggedUser = req.user
     Object.keys(req.body).forEach(key => (loggedUser[key] = req.body[key]));
-    loggedUser.save();
+    console.log("ERROR HERE");
+    await loggedUser.save();
     // const user = await User.findByIdAndUpdate(loggedUser._id, loggedUser, {
     //   returnDocument: "before", //If you try and update a field that is not present, it will get ignored
     //   runValidators: true,
@@ -39,7 +39,7 @@ profileRouter.patch("/profile/edit", userAuth, async (req, res)=>{
       data: userWithoutPassword
     });
   } catch (err) {
-    res.status(400).send("Something went wrong" + err);
+    res.status(400).send("Something went wrong " + err);
   }
 })
 
