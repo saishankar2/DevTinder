@@ -21,8 +21,13 @@ authRouter.post("/signup", async (req, res) => {
       emailId,
       password: passwordHash,
     });
-    await user.save();
-    res.send("User Added");
+    const savedUser = await user.save();
+     const token = await savedUser.getJWT(); //Creates the token
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 36000000),
+      });
+
+    res.json({message: "Welcome new user", data: savedUser});
   } catch (err) {
     res.status(404).send(err.message);
   }
@@ -36,7 +41,6 @@ authRouter.post("/login", async (req, res) => {
       throw new Error("Invalid Creadentials");
     }
     const isPasswordValid = await user.validatePassword(password);
-    console.log(isPasswordValid);
     if (isPasswordValid) {
       const token = await user.getJWT(); //Creates the token
       res.cookie("token", token, {

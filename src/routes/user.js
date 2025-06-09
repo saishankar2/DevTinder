@@ -16,7 +16,7 @@ userRouter.get("/user/requests/received", userAuth, async (req, res)=>{
        //.populate("fromUserId", "firstName lastName") //Can write as space separated string
      res.json({
         message: "Data Fetched",
-        connectionRequests
+        data: connectionRequests
      })
   }
   catch(err){
