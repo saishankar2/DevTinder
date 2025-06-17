@@ -8,7 +8,7 @@ try{
     return res.status(401).send("You are not logged in!");
   }
   //Validate token
-  const decodedObj = await jwt.verify(token, "DEV@Tinder$420");
+  const decodedObj = await jwt.verify(token, process.env.JWT_SECRET);
   //Find user
   const {_id} = decodedObj;
   const user = await User.findById(_id);
